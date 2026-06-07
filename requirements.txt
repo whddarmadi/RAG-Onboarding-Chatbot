@@ -1,0 +1,8 @@
+langchain
+langchain-community
+langchain-text-splitters
+pymupdf
+sentence-transformers
+qdrant-client
+groq
+rouge-score
