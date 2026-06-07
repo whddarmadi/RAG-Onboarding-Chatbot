@@ -133,6 +133,12 @@ RAG-Onboarding-Chatbot/
 
 ## 👤 Author
 
+**Wahid Setio Darmadi**
+- GitHub: [@whddarmadi](https://github.com/whddarmadi)
+- LinkedIn: [linkedin.com/in/whddarmadi](https://linkedin.com/in/whddarmadi)
+- Instagram: [@wahwahcreative](https://www.instagram.com/wahwahcreative/)
+- Bootcamp: Indonesia AI — Batch 10
+
 Dibuat sebagai Final Project AI Bootcamp.  
 Fokus domain: Onboarding karyawan baru di industri Food & Beverage (F&B).
 
