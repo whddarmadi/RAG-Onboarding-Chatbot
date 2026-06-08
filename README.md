@@ -1,6 +1,8 @@
 # 🤖 Asisten Informasi Karyawan — F&B Industry
 
-![Pipeline]<img src="assets/Pipeline_RAG_Final_Bootcamp.png width="500"/>
+<p align="center">
+  <img src="assets/Pipeline_RAG_Final_Bootcamp.png" width="600"/>
+</p>
 
 > Final Project — AI Bootcamp  
 > Retrieval-Augmented Generation (RAG) untuk membantu karyawan baru memahami dokumen internal perusahaan F&B
@@ -20,7 +22,9 @@ Chatbot live dan bisa diakses di:
 
 Setiap percakapan otomatis tercatat di Google Sheets secara real-time:
 
-![Sheets Log]<img src="assets/demo_4_sheets_log.png" width="500"/>
+<p align="center">
+  <img src="assets/demo_4_sheets_log.png" width="700"/>
+</p>
 
 ---
 
