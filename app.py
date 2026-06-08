@@ -1,8 +1,12 @@
 import os
+import time
 import streamlit as st
+from datetime import datetime
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from groq import Groq
+import gspread
+from google.oauth2.service_account import Credentials
 
 # ============================================================
 # Konfigurasi Perusahaan
@@ -14,13 +18,13 @@ COLLECTION_NAME = "katering_yeyeti"
 # Setup halaman
 # ============================================================
 st.set_page_config(
-    page_title=f"Chatbot Onboarding — {COMPANY_NAME}",
+    page_title=f"Asisten Informasi Karyawan — {COMPANY_NAME}",
     page_icon="🤖",
     layout="centered"
 )
 
 # ============================================================
-# Load model & koneksi (cache biar ga reload terus)
+# Load model & koneksi
 # ============================================================
 @st.cache_resource
 def load_resources():
@@ -32,7 +36,38 @@ def load_resources():
     groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
     return embedder, qdrant, groq_client
 
+@st.cache_resource
+def load_sheets():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scopes
+    )
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(st.secrets["SPREADSHEET_ID"]).sheet1
+    return sheet
+
 embedder, qdrant, groq_client = load_resources()
+sheet = load_sheets()
+
+# ============================================================
+# Fungsi Log ke Google Sheets
+# ============================================================
+def log_to_sheets(pertanyaan, jawaban, response_time):
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet.append_row([
+            timestamp,
+            pertanyaan,
+            jawaban,
+            COMPANY_NAME,
+            f"{response_time:.2f}"
+        ])
+    except Exception as e:
+        st.warning(f"Log gagal: {e}")
 
 # ============================================================
 # Fungsi RAG Chat
@@ -53,10 +88,24 @@ def rag_chat(pertanyaan: str, top_k: int = 5):
         messages=[
             {
                 "role": "system",
-                "content": f"""Kamu adalah asisten onboarding karyawan baru di {COMPANY_NAME}.
-Jawab pertanyaan HANYA berdasarkan konteks dokumen internal perusahaan yang diberikan.
-Gunakan bahasa Indonesia yang ramah dan mudah dipahami.
-Jika informasi tidak ada di konteks, katakan dengan jujur bahwa kamu tidak tahu."""
+                "content": f"""Kamu adalah Asisten Informasi Karyawan di {COMPANY_NAME}.
+Tugasmu adalah membantu karyawan baru memahami informasi seputar perusahaan.
+
+Kamu HANYA menjawab pertanyaan berdasarkan dokumen internal perusahaan, meliputi:
+- Profil, visi, misi, dan nilai-nilai perusahaan
+- Hak dan kewajiban karyawan
+- Peraturan dan kebijakan kerja
+- Jam kerja, shift, dan sistem absensi
+- Benefit, santunan, dan kesejahteraan karyawan
+- Prosedur dan SOP operasional dapur
+- Standar kebersihan dan keselamatan dapur
+- Kebijakan halal dan standar bahan baku
+- Produk dan layanan perusahaan
+- Penanganan keluhan pelanggan
+- Pelaporan insiden dan form harian
+
+Gunakan bahasa Indonesia yang ramah, hangat, dan mudah dipahami oleh semua kalangan.
+Jika informasi tidak ada di dokumen, katakan dengan jujur bahwa kamu tidak tahu."""
             },
             {
                 "role": "user",
@@ -69,9 +118,9 @@ Jika informasi tidak ada di konteks, katakan dengan jujur bahwa kamu tidak tahu.
 # ============================================================
 # UI Streamlit
 # ============================================================
-st.title("🤖 Chatbot Onboarding")
+st.title("🤖 Asisten Informasi Karyawan")
 st.subheader(f"{COMPANY_NAME}")
-st.caption("Tanyakan apa saja tentang perusahaan, benefit, prosedur, dan kebijakan kerja.")
+st.caption("Tanyakan apa saja tentang perusahaan, peraturan kerja, hak karyawan, dan prosedur operasional.")
 st.divider()
 
 # Chat history
@@ -79,7 +128,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.messages.append({
         "role": "assistant",
-        "content": f"Halo! Saya asisten onboarding {COMPANY_NAME}. Ada yang bisa saya bantu?"
+        "content": f"Halo! Saya Asisten Informasi Karyawan {COMPANY_NAME}. Saya siap membantu Anda memahami informasi seputar kebijakan, prosedur, dan budaya kerja di sini. Ada yang ingin Anda tanyakan? 😊"
     })
 
 # Tampilkan chat history
@@ -89,14 +138,18 @@ for msg in st.session_state.messages:
 
 # Input pertanyaan
 if pertanyaan := st.chat_input("Ketik pertanyaan kamu di sini..."):
-    # Tampilkan pertanyaan user
     st.session_state.messages.append({"role": "user", "content": pertanyaan})
     with st.chat_message("user"):
         st.markdown(pertanyaan)
 
-    # Generate jawaban
     with st.chat_message("assistant"):
         with st.spinner("Mencari jawaban..."):
+            start_time = time.time()
             jawaban = rag_chat(pertanyaan)
+            response_time = time.time() - start_time
+
         st.markdown(jawaban)
+        st.caption(f"⏱️ {response_time:.2f} detik")
         st.session_state.messages.append({"role": "assistant", "content": jawaban})
+
+    log_to_sheets(pertanyaan, jawaban, response_time)

@@ -7,3 +7,5 @@ qdrant-client
 groq
 rouge-score
 streamlit
+gspread
+google-auth
