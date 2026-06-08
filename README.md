@@ -7,6 +7,17 @@
 
 ---
 
+## 📱 Demo
+
+Chatbot live dan bisa diakses di:  
+🔗 [rag-app-chatbot-kateringyeyeti.streamlit.app](https://rag-app-chatbot-kateringyeyeti.streamlit.app)
+
+| Tampilan Awal | Contoh Jawaban | Jawaban Detail |
+|---|---|---|
+| ![Demo 1](assets/demo_1_tampilan.jpg) | ![Demo 2](assets/demo_2_contoh_jawaban.jpg) | ![Demo 3](assets/demo_3_laporan_harian.jpg) |
+
+---
+
 ## 📌 Deskripsi Proyek
 
 Chatbot berbasis RAG yang dirancang untuk membantu karyawan baru memahami dokumen internal perusahaan secara interaktif. Sistem ini memungkinkan pengguna mengajukan pertanyaan dalam bahasa natural dan mendapatkan jawaban yang relevan berdasarkan dokumen resmi perusahaan — tanpa perlu membaca seluruh dokumen secara manual.
@@ -37,7 +48,10 @@ Proyek ini menggunakan tiga perusahaan F&B sebagai studi kasus, masing-masing de
 | Vector Database | Qdrant Cloud |
 | Compute | Google Colab + T4 GPU |
 | Document Storage | Google Drive |
+| UI | Streamlit |
 | Evaluation | ROUGE Score |
+
+> Estimasi pemakaian: ~1.400 tokens per request (960 input + 396 output) dengan model LLaMA 3.1 8B Instant
 
 ---
 
@@ -77,12 +91,17 @@ Pertanyaan User → Embedding → Vector Search → Context + Pertanyaan → LLM
 - RAG adalah sistem *pencari + penjawab*, bukan *penghitung*. Pertanyaan yang membutuhkan kalkulasi atau enumerasi total tidak selalu dijawab dengan akurat.
 - Kualitas jawaban sangat bergantung pada kualitas dan kelengkapan dokumen sumber.
 - Sistem dirancang untuk satu perusahaan per sesi — tidak mendukung pencarian lintas perusahaan.
+- Sistem memberikan hasil optimal ketika pertanyaan disampaikan dalam bahasa Indonesia yang jelas dan deskriptif. Pertanyaan dengan banyak singkatan, typo, atau bahasa non-formal dapat menurunkan akurasi pencarian dokumen.
 
 **Rekomendasi penggunaan:**
 - Gunakan pertanyaan yang **spesifik dan deskriptif** untuk hasil optimal.
 - ✅ `"Sebutkan semua menu nasi box di Yeyeti Katering"`
 - ❌ `"Berapa banyak menu di Yeyeti Katering?"`
 - Untuk pertanyaan enumerasi, tambahkan kata kunci seperti *"sebutkan"*, *"jelaskan"*, atau *"apa saja"*.
+
+**Rekomendasi pengembangan:**
+- Tambahkan **query preprocessing** (normalisasi teks, koreksi typo) agar chatbot dapat melayani semua lapisan karyawan — termasuk yang terbiasa menggunakan bahasa sehari-hari atau informal.
+- Tambahkan **query expansion** — LLM memparafrase ulang pertanyaan user sebelum dicari ke Qdrant untuk meningkatkan akurasi retrieval.
 
 ---
 
@@ -102,8 +121,12 @@ RAG-Onboarding-Chatbot/
 │   └── rag_susumbokdarmi.py
 │
 ├── assets/
-│   └── Pipeline_RAG_Final_Bootcamp.png
+│   ├── Pipeline_RAG_Final_Bootcamp.png
+│   ├── demo_1_tampilan.jpg
+│   ├── demo_2_contoh_jawaban.jpg
+│   └── demo_3_laporan_harian.jpg
 │
+├── app.py
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -144,4 +167,4 @@ Fokus domain: Onboarding karyawan baru di industri Food & Beverage (F&B).
 
 ---
 
-*Built with Python · LangChain · Groq · Qdrant · Google Colab*
+*Built with Python · LangChain · Groq · Qdrant · Google Colab · Streamlit*
