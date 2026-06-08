@@ -67,7 +67,7 @@ def log_to_sheets(pertanyaan, jawaban, response_time):
             f"{response_time:.2f}"
         ])
     except Exception as e:
-         st.error(f"Log gagal: {e}")  # ganti st.warning jadi st.error
+         st.warning(f"Log gagal: {e}")
 
 # ============================================================
 # Fungsi RAG Chat
