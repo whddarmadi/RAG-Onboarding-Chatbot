@@ -6,3 +6,4 @@ sentence-transformers
 qdrant-client
 groq
 rouge-score
+streamlit
