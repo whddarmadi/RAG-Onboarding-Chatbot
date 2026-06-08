@@ -121,10 +121,13 @@ RAG-Onboarding-Chatbot/
 │   └── rag_susumbokdarmi.py
 │
 ├── assets/
-│   ├── Pipeline_RAG_Final_Bootcamp.png
-│   ├── demo_1_tampilan.jpg
-│   ├── demo_2_contoh_jawaban.jpg
-│   └── demo_3_laporan_harian.jpg
+├── Pipeline_RAG_Final_Bootcamp.png
+├── demo_1_tampilan.jpg
+├── demo_2_contoh_jawaban.jpg
+├── demo_3_laporan_harian.jpg
+├── finding_1_pesan_menu.jpg
+├── finding_2_harga_paket.jpg
+└── finding_3_kontak_pesan.jpg
 │
 ├── app.py
 ├── .gitignore
@@ -168,3 +171,46 @@ Fokus domain: Onboarding karyawan baru di industri Food & Beverage (F&B).
 ---
 
 *Built with Python · LangChain · Groq · Qdrant · Google Colab · Streamlit*
+
+
+---
+
+## 🧠 Sistem Memori
+
+Chatbot ini menggunakan **session memory** — bukan persistent memory.
+
+| Jenis Memori | Status | Keterangan |
+|---|---|---|
+| **Session memory** | ✅ Ada | Chatbot ingat percakapan selama satu sesi browser |
+| **Persistent memory** | ❌ Tidak ada | Refresh browser = percakapan hilang, mulai dari nol |
+| **User memory** | ❌ Tidak ada | Chatbot tidak membedakan siapa yang sedang chat |
+
+**Cara kerjanya:**
+- Selama sesi berlangsung, riwayat chat disimpan di `st.session_state` (Streamlit)
+- Setiap pertanyaan dikirim beserta konteks dokumen dari Qdrant — bukan riwayat chat sebelumnya
+- Arsitektur RAG kita bersifat **stateless** — yang "diingat" chatbot adalah **dokumen di Qdrant**, bukan percakapan
+
+**Rekomendasi pengembangan:**
+Untuk menambahkan memori percakapan yang persisten, dapat menggunakan **Conversation Buffer Memory** dari LangChain — sehingga chatbot bisa mengingat konteks antar sesi.
+
+---
+
+## 🔍 Temuan Menarik
+
+Selama pengujian ditemukan bahwa chatbot dapat menjawab pertanyaan **di luar konteks onboarding** — karena dokumen katalog menu ikut ter-embed dalam vector database.
+
+Ketika diajukan pertanyaan seperti layaknya pelanggan, chatbot mampu menjawab dengan detail:
+
+| Pertanyaan | Jawaban Chatbot |
+|---|---|
+| "Bisa pesan paket menu?" | Memberikan daftar pilihan paket menu lengkap |
+| "Harga paket menunya ada?" | Menyebutkan harga per menu dengan detail |
+| "Saya bisa pesan ke mana?" | Memberikan nomor WhatsApp dan Instagram @yeyetikatering |
+
+| Temuan 1 | Temuan 2 | Temuan 3 |
+|---|---|---|
+| ![Finding 1](assets/finding_1_pesan_menu.jpg) | ![Finding 2](assets/finding_2_harga_paket.jpg) | ![Finding 3](assets/finding_3_kontak_pesan.jpg) |
+
+**Analisis:** Ini menunjukkan bahwa RAG tidak hanya efektif untuk onboarding, tetapi berpotensi dikembangkan menjadi **chatbot multifungsi** — melayani karyawan sekaligus calon pelanggan, selama dokumen yang relevan tersedia dalam vector database.
+
+**Rekomendasi:** Untuk penggunaan yang lebih terfokus, tambahkan filter topik di system prompt. Namun untuk use case yang lebih luas, temuan ini membuka peluang pengembangan lebih lanjut.
