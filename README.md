@@ -73,18 +73,19 @@ Topik dokumen yang ter-embed mencakup: profil perusahaan, visi & misi, sistem bu
 ```
 PDF Dokumen → Chunking → Embedding → Qdrant Cloud
                                            ↓
-Pertanyaan User → Embedding → Vector Search → Context + Pertanyaan → LLM → Jawaban
-                                                                              ↓
-                                                                    Log → Google Sheets
+Pertanyaan User → Contextualization → Embedding → Vector Search → Context + Pertanyaan + Memory → LLM → Jawaban
+                                                                                                          ↓
+                                                                                               Log → Google Sheets
 ```
 
 1. **Load** — Dokumen PDF dibaca menggunakan PyMuPDF
 2. **Chunking** — Dokumen dipecah menjadi potongan 500 karakter dengan overlap 50 karakter
 3. **Embedding** — Tiap chunk dikonversi menjadi vektor menggunakan SentenceTransformers
 4. **Store** — Vektor disimpan permanen di Qdrant Cloud
-5. **Retrieve** — Pertanyaan user di-embed, lalu dicari chunk paling relevan via cosine similarity
-6. **Generate** — Context + pertanyaan dikirim ke Groq LLaMA 3.1 untuk menghasilkan jawaban
-7. **Log** — Setiap percakapan otomatis tercatat di Google Sheets (timestamp, pertanyaan, jawaban, perusahaan, response time)
+5. **Contextualize** — Pertanyaan lanjutan ditulis ulang menjadi pertanyaan mandiri berdasarkan riwayat percakapan, agar retrieval lebih akurat
+6. **Retrieve** — Pertanyaan di-embed, lalu dicari chunk paling relevan via cosine similarity. Jumlah chunk dinamis: lebih banyak untuk pertanyaan menu
+7. **Generate** — Context + pertanyaan + memori 3 giliran terakhir dikirim ke Groq LLaMA 3.1 untuk menghasilkan jawaban
+8. **Log** — Setiap percakapan otomatis tercatat di Google Sheets (timestamp, pertanyaan, jawaban, perusahaan, response time)
 
 ---
 
@@ -103,20 +104,23 @@ Pertanyaan User → Embedding → Vector Search → Context + Pertanyaan → LLM
 
 ## 🧠 Sistem Memori
 
-Chatbot ini menggunakan **session memory** — bukan persistent memory.
+Chatbot ini menggunakan **multi-turn memory** dalam satu sesi browser.
 
 | Jenis Memori | Status | Keterangan |
 |---|---|---|
 | **Session memory** | ✅ Ada | Chatbot ingat percakapan selama satu sesi browser |
+| **Multi-turn memory** | ✅ Ada | 3 pesan terakhir dikirim ke LLM untuk menjaga konsistensi antar giliran |
 | **Persistent memory** | ❌ Tidak ada | Refresh browser = percakapan hilang, mulai dari nol |
 | **User memory** | ❌ Tidak ada | Chatbot tidak membedakan siapa yang sedang chat |
 
 **Cara kerjanya:**
-- Selama sesi berlangsung, riwayat chat disimpan di `st.session_state` (Streamlit)
-- Arsitektur RAG bersifat **stateless** — yang "diingat" chatbot adalah **dokumen di Qdrant**, bukan percakapan
+- Riwayat chat disimpan di `st.session_state` (Streamlit) selama sesi berlangsung
+- 3 pesan terakhir (`MAX_HISTORY_TURNS = 3`) disertakan ke LLM di setiap request — menjaga konsistensi jawaban antar giliran
+- **Query contextualization** — pertanyaan lanjutan (mis. *"itu apa?"*) secara otomatis ditulis ulang menjadi pertanyaan mandiri sebelum dicari ke Qdrant, meningkatkan akurasi retrieval
+- Arsitektur RAG bersifat **stateless** — yang "diingat" chatbot adalah **dokumen di Qdrant**, bukan percakapan antar sesi
 
 **Rekomendasi pengembangan:**
-Tambahkan **Conversation Buffer Memory** dari LangChain untuk memori percakapan yang persisten antar sesi.
+Tambahkan persistent memory antar sesi menggunakan database eksternal (Redis atau PostgreSQL) untuk melanjutkan percakapan setelah browser di-refresh.
 
 ---
 
@@ -127,6 +131,7 @@ Tambahkan **Conversation Buffer Memory** dari LangChain untuk memori percakapan 
 - Kualitas jawaban sangat bergantung pada kualitas dan kelengkapan dokumen sumber.
 - Sistem dirancang untuk satu perusahaan per sesi — tidak mendukung pencarian lintas perusahaan.
 - Sistem memberikan hasil optimal ketika pertanyaan disampaikan dalam bahasa Indonesia yang jelas dan deskriptif. Pertanyaan dengan banyak singkatan, typo, atau bahasa non-formal dapat menurunkan akurasi pencarian dokumen.
+- Konsistensi intra-sesi — jika informasi tersebar di banyak chunk berbeda dengan variasi penulisan, chatbot mungkin tidak selalu menggabungkannya secara sempurna.
 
 **Rekomendasi penggunaan:**
 - Gunakan pertanyaan yang **spesifik dan deskriptif** untuk hasil optimal.
@@ -135,12 +140,15 @@ Tambahkan **Conversation Buffer Memory** dari LangChain untuk memori percakapan 
 - Untuk pertanyaan enumerasi, tambahkan kata kunci seperti *"sebutkan"*, *"jelaskan"*, atau *"apa saja"*.
 
 **Rekomendasi pengembangan:**
+- ✅ **Query contextualization** — sudah diimplementasikan. Pertanyaan lanjutan ditulis ulang otomatis sebelum dicari ke Qdrant.
 - Tambahkan **query preprocessing** (normalisasi teks, koreksi typo) agar sistem dapat melayani semua lapisan karyawan — termasuk yang terbiasa menggunakan bahasa sehari-hari atau informal.
-- Tambahkan **query expansion** — LLM memparafrase ulang pertanyaan user sebelum dicari ke Qdrant untuk meningkatkan akurasi retrieval.
+- Tambahkan **RAGAS evaluation** sebagai metrik evaluasi lanjutan — mengukur Faithfulness, Answer Relevancy, Context Precision, dan Context Recall secara lebih granular dibanding ROUGE.
 
 ---
 
 ## 🔍 Temuan Menarik
+
+### Temuan 1–3: Chatbot Bisa Menjawab Pertanyaan Pelanggan
 
 Selama pengujian ditemukan bahwa sistem dapat menjawab pertanyaan **di luar konteks informasi karyawan** — karena dokumen katalog menu ikut ter-embed dalam vector database.
 
@@ -158,7 +166,33 @@ Ketika diajukan pertanyaan seperti layaknya pelanggan, sistem mampu menjawab den
 
 **Analisis:** Ini menunjukkan bahwa RAG tidak hanya efektif untuk informasi karyawan, tetapi berpotensi dikembangkan menjadi **sistem multifungsi** — melayani karyawan sekaligus calon pelanggan, selama dokumen yang relevan tersedia dalam vector database.
 
-**Rekomendasi:** Untuk penggunaan yang lebih terfokus, tambahkan filter topik di system prompt. Namun untuk use case yang lebih luas, temuan ini membuka peluang pengembangan lebih lanjut.
+---
+
+### Temuan 4: Adversarial Testing — Analisis Hallucination
+
+Dilakukan sesi adversarial testing dengan skenario roleplay: penguji berpura-pura menjadi karyawan baru dan mengajukan pertanyaan secara progresif — termasuk pertanyaan jebakan dan asumsi yang salah — selama 30+ giliran percakapan.
+
+Dari sesi ini ditemukan 5 kasus hallucination yang dibagi dua kategori:
+
+**🔴 Hallucination Fatal (perlu diperbaiki)**
+
+| Kasus | Yang Terjadi | Akar Masalah |
+|---|---|---|
+| `"RPH itu apa?"` | Chatbot mengarang kepanjangan *"Rahasia Pemanggahan Haram"* | LLM mengisi kekosongan dokumen dengan generalisasi — domain halal sangat kritis |
+| `"Kelonggaran syar'i itu apa?"` | Chatbot mengaku tidak mengenal istilah yang baru saja ia sebut sendiri | Retrieval gagal karena informasi tersebar di chunk berbeda dengan variasi ejaan |
+
+**🟡 Hallucination yang Bisa Dimaafkan**
+
+| Kasus | Yang Terjadi | Akar Masalah |
+|---|---|---|
+| Sayur Lodeh diklaim "dari Medan" | Over-generalize dari nama bahan (teri Medan) | Tidak berdampak operasional, bisa dikoreksi user |
+| Nasi Cakalang diklaim "khas Betawi" | Mengikuti kategorisasi dokumen secara literal | Kesalahan dokumen sumber, bukan sistem |
+| SOP lengkap dikarang sebagian | LLM mengisi gap dokumen dengan logika umum | Chatbot tetap jujur mengakui keterbatasannya |
+
+**Perbaikan yang sudah diimplementasikan:**
+- System prompt kini memuat 7 aturan anti-hallucination eksplisit, termasuk larangan mengarang kepanjangan singkatan dan klaim asal daerah
+- Definisi `kelonggaran syar'i` ditanam langsung di system prompt sebagai fallback
+- `RPH = Rumah Potong Hewan` didefinisikan eksplisit di system prompt
 
 ---
 
