@@ -1,8 +1,6 @@
 # 🤖 Asisten Informasi Karyawan — F&B Industry
 
-<p align="center">
-  <img src="assets/Pipeline_RAG_Final_Bootcamp.png" width="600"/>
-</p>
+(assets/Pipeline_RAG_Final_Bootcamp.png)
 
 > Final Project — AI Bootcamp  
 > Retrieval-Augmented Generation (RAG) untuk membantu karyawan baru memahami dokumen internal perusahaan F&B
